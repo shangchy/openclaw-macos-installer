@@ -18,7 +18,23 @@ OpenClaw（小龙虾）macOS 一键安装器
   openclaw gateway status
   openclaw dashboard
 
+若提示找不到 openclaw：
+  export PATH="$HOME/.openclaw/bin:$PATH"
+  然后新开一个 Terminal 窗口再试。
+
+【常见问题】
+• Installing Homebrew failed / Need sudo access
+  旧版一键包会走系统安装并装 Homebrew，需要管理员密码。
+  请改用新版安装包（默认装到 ~/.openclaw，不需要 sudo）。
+  或先用管理员账号在终端执行：
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  再重新运行安装器。
+
+• 当前用户不是 Administrator
+  默认用户目录安装即可，不必管理员。
+
 【说明】
-本安装器调用官方脚本：https://openclaw.ai/install.sh
+默认调用官方用户安装脚本：https://openclaw.ai/install-cli.sh
+系统安装（可选）：https://openclaw.ai/install.sh
 文档：https://docs.openclaw.ai/start/getting-started
 日志：~/Library/Logs/OpenClawInstaller/

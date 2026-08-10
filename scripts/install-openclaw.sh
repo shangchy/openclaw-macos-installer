@@ -1,21 +1,25 @@
 #!/usr/bin/env bash
 # OpenClaw (小龙虾) macOS one-click installer
-# Wraps the official installer: https://openclaw.ai/install.sh
+# Prefer user-local install (no Homebrew/sudo). Fall back to official install.sh
+# with a real TTY (NOT curl|bash) so sudo password prompts work.
 set -euo pipefail
 
 APP_NAME="OpenClaw (小龙虾)"
 INSTALL_URL="https://openclaw.ai/install.sh"
+INSTALL_CLI_URL="https://openclaw.ai/install-cli.sh"
 LOG_DIR="${HOME}/Library/Logs/OpenClawInstaller"
 LOG_FILE="${LOG_DIR}/install-$(date +%Y%m%d-%H%M%S).log"
 SKIP_ONBOARD=0
 DRY_RUN=0
 VERIFY=1
+FORCE_SYSTEM=0
 
 usage() {
   cat <<'EOF'
 Usage: install-openclaw.sh [options]
 
   --skip-onboard   Install CLI only; do not run onboarding wizard
+  --system         Force official install.sh (may need Homebrew + admin sudo)
   --dry-run        Print actions without installing
   --no-verify      Skip post-install verification
   -h, --help       Show this help
@@ -25,6 +29,7 @@ EOF
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --skip-onboard) SKIP_ONBOARD=1; shift ;;
+    --system) FORCE_SYSTEM=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
     --no-verify) VERIFY=0; shift ;;
     -h|--help) usage; exit 0 ;;
@@ -33,6 +38,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 mkdir -p "${LOG_DIR}"
+
+# Log to file AND terminal without stealing stdin (curl|bash / sudo need a real TTY).
 exec > >(tee -a "${LOG_FILE}") 2>&1
 
 banner() {
@@ -54,18 +61,40 @@ require_macos() {
   [[ "$(uname -s)" == "Darwin" ]] || die "This installer only supports macOS."
 }
 
+is_admin_user() {
+  id -Gn 2>/dev/null | grep -qw admin
+}
+
 check_network() {
   echo "→ Checking network..."
   if ! curl -fsSL --proto '=https' --tlsv1.2 --connect-timeout 10 \
-      -o /dev/null -w '' "${INSTALL_URL}"; then
-    die "Cannot reach ${INSTALL_URL}. Check network / proxy / firewall."
+      -o /dev/null "${INSTALL_CLI_URL}"; then
+    die "Cannot reach ${INSTALL_CLI_URL}. Check network / proxy / firewall."
   fi
   echo "  OK"
 }
 
 refresh_path() {
-  # Common locations after official install / Homebrew / npm
-  export PATH="/opt/homebrew/bin:/usr/local/bin:${HOME}/.local/bin:${HOME}/.npm-global/bin:$(npm prefix -g 2>/dev/null)/bin:${PATH}"
+  export PATH="${HOME}/.openclaw/bin:/opt/homebrew/bin:/usr/local/bin:${HOME}/.local/bin:${HOME}/.npm-global/bin:$(npm prefix -g 2>/dev/null)/bin:${PATH}"
+}
+
+ensure_path_hint() {
+  local line='export PATH="$HOME/.openclaw/bin:$PATH"'
+  local rc=""
+  case "${SHELL##*/}" in
+    zsh) rc="${HOME}/.zprofile" ;;
+    bash) rc="${HOME}/.bash_profile" ;;
+    *) rc="${HOME}/.zprofile" ;;
+  esac
+  if [[ -f "${HOME}/.openclaw/bin/openclaw" ]] && [[ -n "${rc}" ]]; then
+    touch "${rc}"
+    if ! grep -qF '.openclaw/bin' "${rc}" 2>/dev/null; then
+      echo "" >> "${rc}"
+      echo "# OpenClaw" >> "${rc}"
+      echo "${line}" >> "${rc}"
+      echo "→ Added PATH to ${rc}"
+    fi
+  fi
 }
 
 resolve_openclaw() {
@@ -77,12 +106,57 @@ resolve_openclaw() {
   return 1
 }
 
-run_official_installer() {
-  echo "→ Downloading and running official OpenClaw installer..."
-  echo "  Source: ${INSTALL_URL}"
+# Download to a file then run — keeps stdin as the Terminal TTY (unlike curl|bash).
+run_script_file() {
+  local url="$1"
+  shift
+  local tmp
+  tmp="$(mktemp -t openclaw-install.XXXXXX)"
+  # shellcheck disable=SC2064
+  trap "rm -f '${tmp}'" RETURN
+  echo "→ Downloading: ${url}"
+  curl -fsSL --proto '=https' --tlsv1.2 "${url}" -o "${tmp}"
+  chmod +x "${tmp}"
+  echo "→ Running installer with interactive Terminal (sudo prompts work here)..."
+  echo ""
+  if [[ "${DRY_RUN}" -eq 1 ]]; then
+    echo "[dry-run] bash ${tmp} $*"
+    return 0
+  fi
+  # Explicit stdin from /dev/tty so nested tools see a TTY even if we are logged.
+  bash "${tmp}" "$@" </dev/tty
+}
+
+run_local_prefix_installer() {
+  echo "→ Using user-local installer (no Homebrew / no admin sudo required)"
+  echo "  Source: ${INSTALL_CLI_URL}"
+  echo "  Prefix: ~/.openclaw"
   echo ""
 
-  local flags=(--no-prompt)
+  local flags=(--onboard)
+  if [[ "${SKIP_ONBOARD}" -eq 1 ]]; then
+    flags=(--no-onboard)
+  fi
+
+  run_script_file "${INSTALL_CLI_URL}" "${flags[@]}"
+  ensure_path_hint
+}
+
+run_system_installer() {
+  echo "→ Using official system installer"
+  echo "  Source: ${INSTALL_URL}"
+  echo "  Note: missing Node may install Homebrew (needs Administrator password)."
+  echo ""
+
+  if ! is_admin_user; then
+    echo "⚠ Current user is not in the 'admin' group."
+    echo "  Homebrew install will fail. Prefer the default user-local path,"
+    echo "  or switch to an Administrator account."
+    echo ""
+  fi
+
+  # Do NOT pass --no-prompt: Homebrew/sudo must be able to ask for a password.
+  local flags=()
   if [[ "${SKIP_ONBOARD}" -eq 1 ]]; then
     flags+=(--no-onboard)
   else
@@ -95,8 +169,24 @@ run_official_installer() {
     flags+=(--dry-run)
   fi
 
-  # shellcheck disable=SC2068
-  curl -fsSL --proto '=https' --tlsv1.2 "${INSTALL_URL}" | bash -s -- ${flags[@]}
+  run_script_file "${INSTALL_URL}" "${flags[@]}"
+}
+
+run_installer() {
+  if [[ "${FORCE_SYSTEM}" -eq 1 ]]; then
+    run_system_installer
+    return
+  fi
+
+  # Default: avoid Homebrew/sudo failure seen on non-admin or non-TTY installs.
+  if run_local_prefix_installer; then
+    return 0
+  fi
+
+  echo ""
+  echo "⚠ User-local install failed; trying official install.sh ..."
+  echo ""
+  run_system_installer
 }
 
 run_onboard_if_needed() {
@@ -108,11 +198,10 @@ run_onboard_if_needed() {
   if ! bin="$(resolve_openclaw)"; then
     echo "⚠ openclaw not found on PATH after install."
     echo "  Open a new Terminal and run: openclaw onboard --install-daemon"
+    echo "  Or: export PATH=\"\$HOME/.openclaw/bin:\$PATH\""
     return 0
   fi
 
-  # Official installer may already have run onboard when TTY is available.
-  # If config exists, skip; otherwise launch wizard.
   if [[ -f "${HOME}/.openclaw/openclaw.json" ]]; then
     echo "→ Config found at ~/.openclaw/openclaw.json — skipping extra onboard."
     return 0
@@ -121,7 +210,7 @@ run_onboard_if_needed() {
   echo "→ Starting onboarding wizard (API key / gateway / daemon)..."
   echo "  Command: ${bin} onboard --install-daemon"
   echo ""
-  "${bin}" onboard --install-daemon || {
+  "${bin}" onboard --install-daemon </dev/tty || {
     echo "⚠ Onboarding did not finish. You can rerun later:"
     echo "  openclaw onboard --install-daemon"
   }
@@ -134,8 +223,8 @@ verify_install() {
 
   if ! resolve_openclaw >/dev/null; then
     echo "⚠ 'openclaw' not found on PATH."
-    echo "  Try: hash -r  (or open a new Terminal window)"
-    echo "  Also check: npm prefix -g"
+    echo "  Try: export PATH=\"\$HOME/.openclaw/bin:\$PATH\""
+    echo "  Then open a new Terminal window."
     return 1
   fi
 
@@ -161,18 +250,36 @@ Next steps:
   2. openclaw gateway status     # check Gateway
   3. openclaw configure          # adjust models / channels
 
-If 'openclaw' is not found, open a NEW Terminal and try again.
-Docs: https://docs.openclaw.ai/start/getting-started
+If 'openclaw' is not found:
+  export PATH="\$HOME/.openclaw/bin:\$PATH"
+  # or open a NEW Terminal window
 
+Docs: https://docs.openclaw.ai/start/getting-started
 Log: ${LOG_FILE}
 EOF
+}
+
+print_preflight() {
+  echo "User: $(whoami)"
+  if is_admin_user; then
+    echo "Admin: yes"
+  else
+    echo "Admin: no (user-local install does not need admin)"
+  fi
+  if [[ -t 0 ]] || [[ -c /dev/tty ]]; then
+    echo "TTY: available"
+  else
+    echo "TTY: missing — open via Terminal / OpenClaw Installer.app"
+  fi
+  echo ""
 }
 
 main() {
   banner
   require_macos
+  print_preflight
   check_network
-  run_official_installer
+  run_installer
   run_onboard_if_needed
   if [[ "${VERIFY}" -eq 1 && "${DRY_RUN}" -eq 0 ]]; then
     verify_install || true

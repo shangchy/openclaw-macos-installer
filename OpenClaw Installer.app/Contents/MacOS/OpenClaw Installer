@@ -17,10 +17,10 @@ CONFIRM="$(osascript <<EOF
 try
   display dialog "即将安装 OpenClaw（小龙虾）。
 
-将执行官方安装流程：
-• 如需要则安装 Node.js
-• 安装 openclaw CLI
-• 引导配置 API Key / Gateway 守护进程
+默认使用用户目录安装（~/.openclaw）：
+• 不需要管理员 / Homebrew
+• 自动安装 Node.js 到本机用户目录
+• 引导配置 API Key / Gateway
 
 需要网络连接。是否继续？" buttons {"取消", "开始安装"} default button "开始安装" with title "${TITLE}" with icon note
   return button returned of result

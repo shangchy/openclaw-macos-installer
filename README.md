@@ -1,6 +1,8 @@
 # OpenClaw（小龙虾）macOS 一键安装包
 
-在 macOS 上双击即可安装 [OpenClaw](https://docs.openclaw.ai/)，内部调用官方安装脚本 `https://openclaw.ai/install.sh`（可自动安装 Node、安装 CLI，并引导 onboard）。
+在 macOS 上双击即可安装 [OpenClaw](https://docs.openclaw.ai/)。
+
+默认调用官方**用户目录**安装脚本 [`install-cli.sh`](https://openclaw.ai/install-cli.sh)（安装到 `~/.openclaw`，**不需要** Homebrew / 管理员 sudo）。若需系统级安装，可运行 `./scripts/install-openclaw.sh --system`。
 
 ## 给最终用户
 
