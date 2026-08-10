@@ -1,0 +1,5 @@
+# Ignore local build outputs; CI regenerates them.
+dist/
+*.dmg
+.DS_Store
+**/._*

@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# macOS .app entry point — opens Terminal and runs the installer with a real TTY
+# so OpenClaw onboarding (API key / daemon) can run interactively.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+INSTALLER="${ROOT}/Resources/install-openclaw.sh"
+TITLE="OpenClaw 小龙虾安装器"
+
+if [[ ! -f "${INSTALLER}" ]]; then
+  osascript -e "display dialog \"找不到安装脚本：\n${INSTALLER}\" buttons {\"好\"} default button 1 with icon stop with title \"${TITLE}\""
+  exit 1
+fi
+
+# Confirm with user (Gatekeeper / first-run friendly)
+CONFIRM="$(osascript <<EOF
+try
+  display dialog "即将安装 OpenClaw（小龙虾）。
+
+将执行官方安装流程：
+• 如需要则安装 Node.js
+• 安装 openclaw CLI
+• 引导配置 API Key / Gateway 守护进程
+
+需要网络连接。是否继续？" buttons {"取消", "开始安装"} default button "开始安装" with title "${TITLE}" with icon note
+  return button returned of result
+on error number -128
+  return "取消"
+end try
+EOF
+)"
+
+if [[ "${CONFIRM}" != "开始安装" ]]; then
+  exit 0
+fi
+
+# Escape path for embedding in AppleScript / shell
+ESCAPED_INSTALLER="${INSTALLER//\\/\\\\}"
+ESCAPED_INSTALLER="${ESCAPED_INSTALLER//\"/\\\"}"
+
+# Run inside Terminal.app so onboard wizard has an interactive TTY
+osascript <<EOF
+tell application "Terminal"
+  activate
+  set installCmd to "clear; echo '=== OpenClaw (小龙虾) 一键安装 ==='; echo ''; bash \"${ESCAPED_INSTALLER}\"; echo ''; echo '按任意键关闭此窗口…'; read -n 1 -s; exit"
+  do script installCmd
+end tell
+EOF
+
+exit 0

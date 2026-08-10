@@ -1,0 +1,12 @@
+# Keep shell scripts LF so they run on macOS after checkout
+*.sh text eol=lf
+*.command text eol=lf
+**/MacOS/** text eol=lf
+
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.plist text eol=lf
+*.txt text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf

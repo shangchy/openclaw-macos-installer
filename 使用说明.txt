@@ -1,0 +1,24 @@
+OpenClaw（小龙虾）macOS 一键安装器
+================================
+
+【怎么用】
+1. 打开本 DMG（或解压 ZIP）
+2. 双击「OpenClaw Installer」
+3. 在弹窗点「开始安装」
+4. 按 Terminal 里的引导完成（需要准备模型 API Key）
+
+若提示「无法打开，因为来自身份不明的开发者」：
+  右键 App → 打开 → 仍要打开
+
+【备用方式】
+双击「一键安装-OpenClaw.command」同样可安装。
+
+【安装后】
+  openclaw --version
+  openclaw gateway status
+  openclaw dashboard
+
+【说明】
+本安装器调用官方脚本：https://openclaw.ai/install.sh
+文档：https://docs.openclaw.ai/start/getting-started
+日志：~/Library/Logs/OpenClawInstaller/
