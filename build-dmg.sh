@@ -13,16 +13,23 @@ VERSION="${OPENCLAW_INSTALLER_VERSION:-1.0.0}"
 DMG_NAME="OpenClaw-Installer-macOS-${VERSION}.dmg"
 DMG_PATH="${ROOT}/dist/${DMG_NAME}"
 VOL_NAME="OpenClaw 小龙虾安装器"
+SRC_SCRIPT="${ROOT}/scripts/install-openclaw.sh"
+APP_SCRIPT="${APP_PATH}/Contents/Resources/install-openclaw.sh"
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 
 [[ "$(uname -s)" == "Darwin" ]] || die "build-dmg.sh must be run on macOS."
 [[ -d "${APP_PATH}" ]] || die "Missing app bundle: ${APP_PATH}"
+[[ -f "${SRC_SCRIPT}" ]] || die "Missing canonical installer: ${SRC_SCRIPT}"
+
+echo "→ Syncing canonical install script into App..."
+mkdir -p "${APP_PATH}/Contents/Resources"
+cp "${SRC_SCRIPT}" "${APP_SCRIPT}"
 
 echo "→ Fixing executable bits..."
 chmod +x "${APP_PATH}/Contents/MacOS/OpenClaw Installer"
-chmod +x "${APP_PATH}/Contents/Resources/install-openclaw.sh"
-chmod +x "${ROOT}/scripts/install-openclaw.sh"
+chmod +x "${APP_SCRIPT}"
+chmod +x "${SRC_SCRIPT}"
 chmod +x "${ROOT}/一键安装-OpenClaw.command" 2>/dev/null || true
 
 # Clear quarantine on the build machine so the staged copy is clean;
@@ -35,9 +42,7 @@ mkdir -p "${STAGE}"
 ditto "${APP_PATH}" "${STAGE}/${APP_NAME}.app"
 cp "${ROOT}/一键安装-OpenClaw.command" "${STAGE}/" 2>/dev/null || true
 cp "${ROOT}/使用说明.txt" "${STAGE}/" 2>/dev/null || true
-
-# Shortcut to Applications (optional, looks more like a real installer DMG)
-ln -sf /Applications "${STAGE}/Applications"
+# No Applications link: this is a run-once installer, not an app to copy into /Applications.
 
 echo "→ Creating ${DMG_PATH}..."
 mkdir -p "${ROOT}/dist"

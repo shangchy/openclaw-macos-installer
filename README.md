@@ -98,20 +98,23 @@ bash prepare-on-mac.sh
 
 | 文件 | 说明 |
 |------|------|
-| `OpenClaw-Installer-macOS-1.0.0.dmg` | 双击挂载后拖出 / 运行 App |
+| `OpenClaw-Installer-macOS-1.0.0.dmg` | 双击挂载后运行 App（一次性安装器） |
 | `OpenClaw-Installer-macOS-1.0.0.zip` | 方便微信 / 网盘传输 |
 
 ## 目录结构
 
 ```
 openclaw-macos-installer/
-├── OpenClaw Installer.app/     # 双击安装的 App
+├── scripts/install-openclaw.sh # 核心安装逻辑（唯一源码，以这里为准）
+├── OpenClaw Installer.app/     # 双击安装的 App（Resources 内是上式拷贝）
 ├── 一键安装-OpenClaw.command   # 备用双击脚本
-├── scripts/install-openclaw.sh # 核心安装逻辑
-├── build-dmg.sh                # 在 Mac 上打包 DMG
+├── prepare-on-mac.sh           # 同步脚本 + 修权限 + 清 quarantine
+├── build-dmg.sh                # 同步脚本后打包 DMG/ZIP
 ├── 使用说明.txt
 └── README.md
 ```
+
+修改 `scripts/install-openclaw.sh` 后，在 Mac 上运行 `bash prepare-on-mac.sh`（或 `./build-dmg.sh`）会自动同步到 App bundle。
 
 ## 安装后检查
 
@@ -144,5 +147,7 @@ codesign --deep --force --options runtime \
 
 ## 说明
 
-- 本仓库为**官方安装流程的封装**，不重新打包 OpenClaw 二进制。
-- 真正的安装仍由官方 `install.sh` 完成，保证与文档一致、便于升级。
+- 本仓库为**非官方便利封装**（不重新打包 OpenClaw 二进制），会下载并执行 openclaw.ai 上的官方安装脚本。
+- **默认**使用官方用户目录安装脚本 [`install-cli.sh`](https://openclaw.ai/install-cli.sh)（`~/.openclaw`，无需 Homebrew / sudo）。
+- **可选**系统级安装：`./scripts/install-openclaw.sh --system` → 官方 [`install.sh`](https://openclaw.ai/install.sh)（可能装 Homebrew，需管理员）。
+- 官方脚本以 `--no-onboard` 安装 CLI；本封装随后统一执行 `openclaw onboard --install-daemon`，避免只配好 config 却未装 daemon。

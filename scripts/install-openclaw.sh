@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # OpenClaw (小龙虾) macOS one-click installer
-# Prefer user-local install (no Homebrew/sudo). Fall back to official install.sh
-# with a real TTY (NOT curl|bash) so sudo password prompts work.
+# Prefer user-local install-cli.sh (no Homebrew/sudo). Fall back to official
+# install.sh with a real TTY (NOT curl|bash) so sudo password prompts work.
+#
+# Canonical copy: scripts/install-openclaw.sh
+# prepare-on-mac.sh / build-dmg.sh sync this into OpenClaw Installer.app.
 set -euo pipefail
 
 APP_NAME="OpenClaw (小龙虾)"
@@ -39,7 +42,8 @@ done
 
 mkdir -p "${LOG_DIR}"
 
-# Log to file AND terminal without stealing stdin (curl|bash / sudo need a real TTY).
+# Log to file AND terminal without stealing stdin.
+# Nested official installers are run under a PTY (script) so isatty still works.
 exec > >(tee -a "${LOG_FILE}") 2>&1
 
 banner() {
@@ -75,7 +79,11 @@ check_network() {
 }
 
 refresh_path() {
-  export PATH="${HOME}/.openclaw/bin:/opt/homebrew/bin:/usr/local/bin:${HOME}/.local/bin:${HOME}/.npm-global/bin:$(npm prefix -g 2>/dev/null)/bin:${PATH}"
+  local npm_bin=""
+  if command -v npm >/dev/null 2>&1; then
+    npm_bin="$(npm prefix -g 2>/dev/null || true)/bin"
+  fi
+  export PATH="${HOME}/.openclaw/bin:/opt/homebrew/bin:/usr/local/bin:${HOME}/.local/bin:${HOME}/.npm-global/bin:${npm_bin}:${PATH}"
 }
 
 ensure_path_hint() {
@@ -106,6 +114,12 @@ resolve_openclaw() {
   return 1
 }
 
+gateway_ready() {
+  local bin="$1"
+  # Non-zero or empty output → treat as not ready (daemon may be missing).
+  "${bin}" gateway status >/dev/null 2>&1
+}
+
 # Download to a file then run — keeps stdin as the Terminal TTY (unlike curl|bash).
 run_script_file() {
   local url="$1"
@@ -113,7 +127,7 @@ run_script_file() {
   local tmp
   tmp="$(mktemp -t openclaw-install.XXXXXX)"
   # shellcheck disable=SC2064
-  trap "rm -f '${tmp}'" RETURN
+  trap "rm -f '${tmp}' '${tmp}.typescript'" RETURN
   echo "→ Downloading: ${url}"
   curl -fsSL --proto '=https' --tlsv1.2 "${url}" -o "${tmp}"
   chmod +x "${tmp}"
@@ -123,22 +137,29 @@ run_script_file() {
     echo "[dry-run] bash ${tmp} $*"
     return 0
   fi
-  # Explicit stdin from /dev/tty so nested tools see a TTY even if we are logged.
-  bash "${tmp}" "$@" </dev/tty
+
+  local rc=0
+  # Prefer a PTY so nested tools see a real TTY on stdout (not only stdin).
+  # Parent may have stdout wired through tee for logging (display is already logged).
+  if [[ -c /dev/tty ]] && command -v script >/dev/null 2>&1; then
+    script -q "${tmp}.typescript" bash "${tmp}" "$@" </dev/tty || rc=$?
+    rm -f "${tmp}.typescript"
+  else
+    bash "${tmp}" "$@" </dev/tty || rc=$?
+  fi
+  return "${rc}"
 }
 
 run_local_prefix_installer() {
   echo "→ Using user-local installer (no Homebrew / no admin sudo required)"
   echo "  Source: ${INSTALL_CLI_URL}"
   echo "  Prefix: ~/.openclaw"
+  echo "  Onboard: handled by this wrapper (openclaw onboard --install-daemon)"
   echo ""
 
-  local flags=(--onboard)
-  if [[ "${SKIP_ONBOARD}" -eq 1 ]]; then
-    flags=(--no-onboard)
-  fi
-
-  run_script_file "${INSTALL_CLI_URL}" "${flags[@]}"
+  # Always skip official onboard here so we only run one unified onboard path
+  # that includes --install-daemon (avoids config-without-daemon gaps).
+  run_script_file "${INSTALL_CLI_URL}" --no-onboard
   ensure_path_hint
 }
 
@@ -146,6 +167,7 @@ run_system_installer() {
   echo "→ Using official system installer"
   echo "  Source: ${INSTALL_URL}"
   echo "  Note: missing Node may install Homebrew (needs Administrator password)."
+  echo "  Onboard: handled by this wrapper (openclaw onboard --install-daemon)"
   echo ""
 
   if ! is_admin_user; then
@@ -156,12 +178,8 @@ run_system_installer() {
   fi
 
   # Do NOT pass --no-prompt: Homebrew/sudo must be able to ask for a password.
-  local flags=()
-  if [[ "${SKIP_ONBOARD}" -eq 1 ]]; then
-    flags+=(--no-onboard)
-  else
-    flags+=(--onboard)
-  fi
+  # Onboard is unified below — do not double-run official --onboard.
+  local flags=(--no-onboard)
   if [[ "${VERIFY}" -eq 1 ]]; then
     flags+=(--verify)
   fi
@@ -202,18 +220,39 @@ run_onboard_if_needed() {
     return 0
   fi
 
+  local has_config=0
   if [[ -f "${HOME}/.openclaw/openclaw.json" ]]; then
-    echo "→ Config found at ~/.openclaw/openclaw.json — skipping extra onboard."
+    has_config=1
+  fi
+
+  if [[ "${has_config}" -eq 1 ]] && gateway_ready "${bin}"; then
+    echo "→ Config and gateway look ready — skipping onboard."
     return 0
   fi
 
-  echo "→ Starting onboarding wizard (API key / gateway / daemon)..."
-  echo "  Command: ${bin} onboard --install-daemon"
+  if [[ "${has_config}" -eq 1 ]]; then
+    echo "→ Config found at ~/.openclaw/openclaw.json, but gateway is not ready."
+    echo "  Running: ${bin} onboard --install-daemon"
+  else
+    echo "→ Starting onboarding wizard (API key / gateway / daemon)..."
+    echo "  Command: ${bin} onboard --install-daemon"
+  fi
   echo ""
-  "${bin}" onboard --install-daemon </dev/tty || {
-    echo "⚠ Onboarding did not finish. You can rerun later:"
-    echo "  openclaw onboard --install-daemon"
-  }
+
+  if [[ -c /dev/tty ]] && command -v script >/dev/null 2>&1; then
+    local cap
+    cap="$(mktemp -t openclaw-onboard.XXXXXX)"
+    script -q "${cap}" "${bin}" onboard --install-daemon </dev/tty || {
+      echo "⚠ Onboarding did not finish. You can rerun later:"
+      echo "  openclaw onboard --install-daemon"
+    }
+    rm -f "${cap}"
+  else
+    "${bin}" onboard --install-daemon </dev/tty || {
+      echo "⚠ Onboarding did not finish. You can rerun later:"
+      echo "  openclaw onboard --install-daemon"
+    }
+  fi
 }
 
 verify_install() {

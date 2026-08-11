@@ -3,7 +3,7 @@ OpenClaw（小龙虾）macOS 一键安装器
 
 【怎么用】
 1. 打开本 DMG（或解压 ZIP）
-2. 双击「OpenClaw Installer」
+2. 双击「OpenClaw Installer」（不必拖到「应用程序」；本包是一次性安装器）
 3. 在弹窗点「开始安装」
 4. 按 Terminal 里的引导完成（需要准备模型 API Key）
 
@@ -34,7 +34,9 @@ OpenClaw（小龙虾）macOS 一键安装器
   默认用户目录安装即可，不必管理员。
 
 【说明】
-默认调用官方用户安装脚本：https://openclaw.ai/install-cli.sh
+本安装器为非官方封装，会下载并执行 openclaw.ai 官方脚本。
+默认：https://openclaw.ai/install-cli.sh（装到 ~/.openclaw，无需 sudo）
 系统安装（可选）：https://openclaw.ai/install.sh
+安装后由本封装执行：openclaw onboard --install-daemon
 文档：https://docs.openclaw.ai/start/getting-started
 日志：~/Library/Logs/OpenClawInstaller/
