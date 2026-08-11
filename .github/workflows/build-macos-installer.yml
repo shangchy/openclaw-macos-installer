@@ -1,4 +1,4 @@
-name: Build macOS Installer
+name: Build Installers
 
 on:
   push:
@@ -7,20 +7,28 @@ on:
       - "OpenClaw Installer.app/**"
       - "scripts/**"
       - "build-dmg.sh"
+      - "build-windows-zip.ps1"
       - "prepare-on-mac.sh"
       - "一键安装-OpenClaw.command"
+      - "一键安装-OpenClaw.bat"
       - "使用说明.txt"
+      - "使用说明-Windows.txt"
       - "OpenClaw用户手册.txt"
+      - "飞书接入说明.txt"
       - ".github/workflows/build-macos-installer.yml"
   pull_request:
     paths:
       - "OpenClaw Installer.app/**"
       - "scripts/**"
       - "build-dmg.sh"
+      - "build-windows-zip.ps1"
       - "prepare-on-mac.sh"
       - "一键安装-OpenClaw.command"
+      - "一键安装-OpenClaw.bat"
       - "使用说明.txt"
+      - "使用说明-Windows.txt"
       - "OpenClaw用户手册.txt"
+      - "飞书接入说明.txt"
       - ".github/workflows/build-macos-installer.yml"
   workflow_dispatch:
     inputs:
@@ -35,13 +43,12 @@ permissions:
   contents: write
 
 jobs:
-  build-dmg:
-    name: Build DMG on macOS
-    runs-on: macos-14
+  version:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Resolve version
         id: ver
         run: |
@@ -51,24 +58,29 @@ jobs:
             V="${{ github.event.release.tag_name }}"
             V="${V#v}"
           else
-            # Distinguish push/PR artifacts (avoid always overwriting 1.0.0)
-            SHORT_SHA="$(echo "${GITHUB_SHA}" | cut -c1-7)"
-            V="1.0.0-${SHORT_SHA}"
+            V="1.0.0"
           fi
           echo "version=${V}" >> "$GITHUB_OUTPUT"
           echo "Building installer version: ${V}"
+
+  build-macos:
+    name: Build macOS DMG
+    needs: version
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Prepare (sync script + permissions)
         run: |
           bash prepare-on-mac.sh
           chmod +x build-dmg.sh
-          # Fail CI if App bundle still drifts from canonical script
           diff -q scripts/install-openclaw.sh \
             "OpenClaw Installer.app/Contents/Resources/install-openclaw.sh"
 
       - name: Build DMG + ZIP
         env:
-          OPENCLAW_INSTALLER_VERSION: ${{ steps.ver.outputs.version }}
+          OPENCLAW_INSTALLER_VERSION: ${{ needs.version.outputs.version }}
         run: ./build-dmg.sh
 
       - name: List artifacts
@@ -77,10 +89,10 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: OpenClaw-Installer-macOS-${{ steps.ver.outputs.version }}
+          name: OpenClaw-Installer-macOS-${{ needs.version.outputs.version }}
           path: |
             dist/*.dmg
-            dist/*.zip
+            dist/OpenClaw-Installer-macOS-*.zip
           if-no-files-found: error
           retention-days: 30
 
@@ -90,5 +102,38 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release upload "${{ github.event.release.tag_name }}" \
-            dist/*.dmg dist/*.zip \
+            dist/*.dmg dist/OpenClaw-Installer-macOS-*.zip \
             --clobber
+
+  build-windows:
+    name: Build Windows ZIP
+    needs: version
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Windows ZIP
+        env:
+          OPENCLAW_INSTALLER_VERSION: ${{ needs.version.outputs.version }}
+        shell: pwsh
+        run: |
+          ./build-windows-zip.ps1 -Version $env:OPENCLAW_INSTALLER_VERSION
+          Get-ChildItem dist | Format-Table Name, Length
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenClaw-Installer-Windows-${{ needs.version.outputs.version }}
+          path: dist/OpenClaw-Installer-Windows-*.zip
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Attach to GitHub Release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        shell: pwsh
+        run: |
+          gh release upload $env:RELEASE_TAG (Get-Item dist/OpenClaw-Installer-Windows-*.zip).FullName --clobber

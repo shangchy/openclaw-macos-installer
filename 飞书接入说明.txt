@@ -1,0 +1,149 @@
+飞书 / Lark 接入 OpenClaw（macOS · Windows 通用）
+================================================
+用飞书（或 Lark）跟装在本机电脑上的 OpenClaw 聊天。
+官方文档：https://docs.openclaw.ai/channels/feishu
+
+【原理】
+  飞书 App  ←→  飞书云  ←→  WebSocket  ←→  本机 Gateway(openclaw)  ←→  模型 API
+  电脑需保持开机，且 openclaw gateway 正在运行。
+  默认 WebSocket，一般不需要公网 IP 或端口映射。
+
+【平台支持】
+  · macOS：支持（本仓库 macOS 安装包装好后按下面做）
+  · Windows：支持（本仓库 Windows 安装包装好后按下面做）
+  命令相同；仅「终端与 PATH」不同。
+
+------------------------------------------------------------
+零、先满足这些
+------------------------------------------------------------
+
+1) 本机已装好 OpenClaw，浏览器 dashboard 能聊天（API Key 已配好）
+2) 版本建议 ≥ 2026.5.29：  openclaw --version
+   过旧：  openclaw update
+3) 网关在跑：  openclaw gateway status
+
+【macOS · 打开终端前可执行】
+  export PATH="$HOME/.openclaw/bin:$PATH"
+
+【Windows · 打开 PowerShell 前可执行】
+  $env:Path = "$env:APPDATA\npm;$env:Path"
+
+------------------------------------------------------------
+一、接入飞书（两系统步骤相同）
+------------------------------------------------------------
+
+第 1 步 · 登录飞书频道（自动装 @openclaw/feishu 插件）
+
+  openclaw channels login --channel feishu
+
+  向导选项说明：
+  · 扫码（QR）：手机飞书扫码，最快；私聊常仅限本人
+  · 手动：到开放平台建应用，粘贴 App ID + App Secret
+      国内飞书：https://open.feishu.cn
+      国际 Lark：https://open.larksuite.com
+  · 域名：国内选 feishu，国际选 lark
+  · 国内 App 扫码无反应 → 改用手动配置
+
+第 2 步 · 重启网关
+
+  openclaw gateway restart
+
+第 3 步 · 飞书里找机器人并发一条「你好」
+
+  若机器人回了配对码（pairing，默认较常见）：
+    在电脑终端执行：
+      openclaw pairing list feishu
+      openclaw pairing approve feishu <配对码>
+    再在飞书里发一条消息。
+
+第 4 步 · 确认成功
+
+  · 飞书里收到 AI 回复
+  · 可选：openclaw logs --follow 看是否有 feishu 相关日志
+  · 可选：openclaw doctor
+
+------------------------------------------------------------
+二、手动建飞书应用（扫码失败时）
+------------------------------------------------------------
+
+1. 打开飞书开放平台 → 创建企业自建应用 → 开启「机器人」
+2. 复制 App ID、App Secret
+3. 事件订阅优先用【长连接 / WebSocket】（与 OpenClaw 默认一致）
+4. 开通 IM 收发消息相关权限，并发布/启用应用
+5. 再执行：  openclaw channels login --channel feishu
+   选手动，粘贴凭证
+6.  openclaw gateway restart
+
+权限与事件明细以官方文档为准：
+  https://docs.openclaw.ai/channels/feishu
+
+------------------------------------------------------------
+三、日常使用
+------------------------------------------------------------
+
+  私聊：飞书里直接和机器人说话
+  群聊：把机器人拉进群；多数情况需 @机器人
+  本机网页仍可用：  openclaw dashboard
+  电脑关机或停网关后，飞书发消息不会被处理
+
+  常用：
+    openclaw gateway status
+    openclaw gateway restart
+    openclaw logs --follow
+    openclaw pairing list feishu
+    openclaw update
+
+------------------------------------------------------------
+四、权限简述（安全）
+------------------------------------------------------------
+
+  pairing（默认常见）  陌生人先配对，你在电脑批准 —— 推荐
+  allowlist             只允许名单内用户 open_id（ou_xxx）
+  open + allowFrom *    任意人可私聊 —— 有风险，勿公开滥用
+
+  批准配对：
+    openclaw pairing approve feishu <CODE>
+
+------------------------------------------------------------
+五、常见问题（macOS / Windows 通用）
+------------------------------------------------------------
+
+• 飞书发了没回复
+  1) openclaw gateway status        是否在跑
+  2) openclaw pairing list feishu     是否要配对
+  3) openclaw logs --follow           有无入站消息
+  4) openclaw dashboard               本机网页能否聊（排除模型 Key 问题）
+  5) 电脑休眠/关机/断网会导致收不到
+
+• 提示找不到 openclaw
+  macOS：export PATH="$HOME/.openclaw/bin:$PATH"
+  Windows：$env:Path = "$env:APPDATA\npm;$env:Path"
+  详见各平台使用说明
+
+• 扫码失败
+  改手动 App ID/Secret；确认 feishu 与 lark 域名选对
+
+• 公司网络
+  需能访问飞书开放 API；默认本机主动连云端，通常不用映射端口
+
+• 以前装失败能否直接配飞书
+  先保证 openclaw --version 与 gateway status 正常，再配频道
+  频道配置会写入用户目录 ~/.openclaw（Windows 在 %USERPROFILE%\.openclaw）
+
+------------------------------------------------------------
+六、一页口令（复制即用）
+------------------------------------------------------------
+
+  # 1 PATH（选你的系统）
+  # macOS:    export PATH="$HOME/.openclaw/bin:$PATH"
+  # Windows:  $env:Path = "$env:APPDATA\npm;$env:Path"
+
+  openclaw --version
+  openclaw gateway status
+  openclaw channels login --channel feishu
+  openclaw gateway restart
+  # 若有配对码：
+  openclaw pairing list feishu
+  openclaw pairing approve feishu <CODE>
+
+本说明为非官方扫盲整理，随本安装仓附带；以 OpenClaw 官方文档为准。

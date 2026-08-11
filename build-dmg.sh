@@ -43,6 +43,7 @@ ditto "${APP_PATH}" "${STAGE}/${APP_NAME}.app"
 cp "${ROOT}/一键安装-OpenClaw.command" "${STAGE}/" 2>/dev/null || true
 cp "${ROOT}/使用说明.txt" "${STAGE}/" 2>/dev/null || true
 cp "${ROOT}/OpenClaw用户手册.txt" "${STAGE}/" 2>/dev/null || true
+cp "${ROOT}/飞书接入说明.txt" "${STAGE}/" 2>/dev/null || true
 # No Applications link: this is a run-once installer, not an app to copy into /Applications.
 
 echo "→ Creating ${DMG_PATH}..."

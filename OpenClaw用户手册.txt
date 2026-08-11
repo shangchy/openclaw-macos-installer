@@ -1,6 +1,6 @@
 OpenClaw（小龙虾）用户手册 · 扫盲版
 ====================================
-适用：已经用本安装器在 macOS 上装好 OpenClaw 的新手
+适用：已经用本安装器在 macOS 或 Windows 上装好 OpenClaw 的新手
 官方完整文档：https://docs.openclaw.ai/start/getting-started
 
 ------------------------------------------------------------
@@ -21,31 +21,42 @@ OpenClaw（也叫「小龙虾」）是一个跑在你电脑上的 AI 助手平�
   3. Control UI（控制面板 / Dashboard）
      浏览器里的聊天和管理界面。日常聊天优先用它。
 
-默认安装位置（本安装器用户目录模式）：
-  程序与命令 ≈ ~/.openclaw/bin/openclaw
-  配置文件   ≈ ~/.openclaw/openclaw.json
-  安装日志   ≈ ~/Library/Logs/OpenClawInstaller/
+默认位置提示：
+
+  macOS（本安装器用户目录模式）：
+    命令 ≈ ~/.openclaw/bin/openclaw
+    配置 ≈ ~/.openclaw/openclaw.json
+    安装日志 ≈ ~/Library/Logs/OpenClawInstaller/
+
+  Windows（官方 install.ps1 / npm 全局）：
+    命令 ≈ %APPDATA%\npm\openclaw.cmd
+    配置 ≈ %USERPROFILE%\.openclaw\openclaw.json
+    安装日志 ≈ %LOCALAPPDATA%\OpenClawInstaller\logs\
 
 ------------------------------------------------------------
 二、开始前检查（30 秒）
 ------------------------------------------------------------
 
-1. 打开 macOS 的「终端」(Terminal)
-
-2. 确认命令能用：
+【macOS】打开「终端」(Terminal)：
 
      export PATH="$HOME/.openclaw/bin:$PATH"
      openclaw --version
 
-   若提示找不到命令：请打开同目录下的「使用说明.txt」
-   里【常见问题】→「找不到 openclaw」。
+【Windows】打开 PowerShell：
 
-3. 确认网关在跑：
+     $env:Path = "$env:APPDATA\npm;$env:Path"
+     openclaw --version
+
+若提示找不到命令：
+  macOS → 见「使用说明.txt」常见问题
+  Windows → 见「使用说明-Windows.txt」常见问题
+
+确认网关在跑：
 
      openclaw gateway status
 
-   正常时会看到 Gateway 在监听（常见端口 18789）。
-   若显示没在运行，尝试：
+  正常时会看到 Gateway 在监听（常见端口 18789）。
+  若显示没在运行，尝试：
 
      openclaw gateway start
      # 或重新做一次引导（会装后台服务）：
@@ -82,9 +93,13 @@ OpenClaw（也叫「小龙虾」）是一个跑在你电脑上的 AI 助手平�
 四、你最常会用到的命令
 ------------------------------------------------------------
 
-先保证 PATH（新开终端若找不到命令就先执行）：
+先保证 PATH：
 
-  export PATH="$HOME/.openclaw/bin:$PATH"
+  macOS:
+    export PATH="$HOME/.openclaw/bin:$PATH"
+
+  Windows PowerShell:
+    $env:Path = "$env:APPDATA\npm;$env:Path"
 
 命令一览（从常用到偶尔用）：
 
@@ -227,9 +242,13 @@ OpenClaw（也叫「小龙虾」）是一个跑在你电脑上的 AI 助手平�
   → openclaw configure 或 openclaw onboard
   → openclaw doctor
 
-• 提示 command not found: openclaw
-  → export PATH="$HOME/.openclaw/bin:$PATH"
-  → 详见「使用说明.txt」常见问题
+• 提示 command not found: openclaw / 无法识别
+  macOS:
+    export PATH="$HOME/.openclaw/bin:$PATH"
+    详见「使用说明.txt」
+  Windows:
+    $env:Path = "$env:APPDATA\npm;$env:Path"
+    详见「使用说明-Windows.txt」
 
 • 换了电脑 / 换了用户
   → 配置在各自用户目录 ~/.openclaw，不会自动带过去
@@ -246,11 +265,17 @@ OpenClaw（也叫「小龙虾」）是一个跑在你电脑上的 AI 助手平�
 十、建议你记住的最小命令集
 ------------------------------------------------------------
 
-  export PATH="$HOME/.openclaw/bin:$PATH"
-  openclaw gateway status
-  openclaw dashboard
-  openclaw doctor
-  openclaw configure
+  macOS:
+    export PATH="$HOME/.openclaw/bin:$PATH"
+
+  Windows:
+    $env:Path = "$env:APPDATA\npm;$env:Path"
+
+  通用：
+    openclaw gateway status
+    openclaw dashboard
+    openclaw doctor
+    openclaw configure
 
 每天只会用两个的话，就只记：
 
@@ -258,7 +283,52 @@ OpenClaw（也叫「小龙虾」）是一个跑在你电脑上的 AI 助手平�
   openclaw dashboard
 
 ------------------------------------------------------------
-十一、更多学习
+十一、接入飞书（macOS · Windows 都支持）
+------------------------------------------------------------
+
+用飞书和本机 OpenClaw 聊天。完整说明见同目录：
+
+  「飞书接入说明.txt」
+
+官方：https://docs.openclaw.ai/channels/feishu
+
+要求：
+  · 本机 dashboard 已能聊天（API Key 正常）
+  · openclaw --version 建议 ≥ 2026.5.29，过旧执行 openclaw update
+  · openclaw gateway status 显示网关在跑
+  · 电脑保持开机，服务别停
+
+先准备 PATH：
+
+  macOS Terminal:
+    export PATH="$HOME/.openclaw/bin:$PATH"
+
+  Windows PowerShell:
+    $env:Path = "$env:APPDATA\npm;$env:Path"
+
+然后在两端执行相同命令：
+
+  openclaw gateway status
+  openclaw channels login --channel feishu
+  openclaw gateway restart
+
+  # 扫码或手动（App ID + Secret）。域名：国内 feishu / 国际 lark。
+  # 国内扫码失败改手动：https://open.feishu.cn
+
+  # 默认常为配对策略时，机器人会给配对码，在电脑上批准：
+  openclaw pairing list feishu
+  openclaw pairing approve feishu <配对码>
+
+成功：在飞书里给机器人发消息能收到 AI 回复。
+也可：openclaw logs --follow 观察入站。
+
+排障：
+  · 没回复 → 看 gateway 是否在跑、是否还要配对、dashboard 本机能否聊
+  · 扫码失败 → 手动建应用 + App ID/Secret
+  · 找不到命令 → 回看第二节 PATH
+
+------------------------------------------------------------
+十二、更多学习
 ------------------------------------------------------------
 
   快速上手：  https://docs.openclaw.ai/start/getting-started
@@ -266,7 +336,9 @@ OpenClaw（也叫「小龙虾」）是一个跑在你电脑上的 AI 助手平�
   控制面板：  https://docs.openclaw.ai/web/dashboard
   网关命令：  https://docs.openclaw.ai/cli/gateway
   消息频道：  https://docs.openclaw.ai/channels
-  本安装器：  见 使用说明.txt / README.md
+  飞书频道：  https://docs.openclaw.ai/channels/feishu
+  飞书接入：  本仓「飞书接入说明.txt」
+  本安装器：  macOS 见 使用说明.txt / Windows 见 使用说明-Windows.txt
 
-本手册为非官方扫盲说明，随本 macOS 一键安装包附带；
+本手册为非官方扫盲说明，随本安装包附带（macOS / Windows）；
 命令与界面若随 OpenClaw 版本更新略有差异，以官方文档为准。

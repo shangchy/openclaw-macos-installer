@@ -1,0 +1,86 @@
+OpenClaw（小龙虾）Windows 一键安装器
+====================================
+
+【怎么用】
+1. 解压安装包（若拿到的是 ZIP）
+2. 双击「一键安装-OpenClaw.bat」
+3. 若弹出 SmartScreen / 安全警告：更多信息 → 仍要运行
+4. 在黑色窗口中按提示完成（需要准备模型 API Key）
+5. 安装结束后，建议新开一个 PowerShell 窗口再使用
+
+【备用方式 · 命令行】
+  右键「一键安装-OpenClaw.bat」所在文件夹 → 在终端中打开，然后：
+
+    powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-openclaw.ps1
+
+  仅装 CLI、跳过引导：
+
+    powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-openclaw.ps1 -SkipOnboard
+
+【安装后 · 如何使用】
+最短路径（PowerShell）：
+
+  $env:Path = "$env:APPDATA\npm;$env:Path"
+  openclaw --version
+  openclaw gateway status
+  openclaw dashboard
+
+然后在浏览器控制面板里输入一句话聊天。
+
+更完整扫盲说明见：
+  「OpenClaw用户手册.txt」
+
+【接入飞书】（Windows / macOS 同一套命令）
+完整步骤见同目录「飞书接入说明.txt」。摘要：
+
+  $env:Path = "$env:APPDATA\npm;$env:Path"
+  openclaw gateway status
+  openclaw channels login --channel feishu
+  openclaw gateway restart
+  # 若机器人给了配对码：
+  openclaw pairing list feishu
+  openclaw pairing approve feishu <配对码>
+
+然后在飞书里给机器人发消息即可（Gateway 需保持运行；电脑勿关机休眠太久）。
+
+【常见问题】
+• 双击 bat 一闪而过 / 被拦截
+  Windows 安全中心或 SmartScreen 可能拦截未签名脚本。
+  右键 bat → 属性 → 若有「解除锁定」请勾选 → 确定，再双击。
+  或在 PowerShell 中手动执行上面「备用方式」命令。
+
+• 执行策略 / cannot be loaded because running scripts is disabled
+  本 bat 已对当前进程使用 Bypass。若仍失败，先执行：
+    Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+  再运行 scripts\install-openclaw.ps1。
+
+• 找不到 openclaw / 无法识别
+  官方 Windows 安装一般把命令放在 %APPDATA%\npm。
+  新开 PowerShell 后执行：
+    $env:Path = "$env:APPDATA\npm;$env:Path"
+    openclaw --version
+  若不存在该文件，说明安装未成功：
+    dir "%APPDATA%\npm\openclaw*"
+    查看日志：%LOCALAPPDATA%\OpenClawInstaller\logs\
+
+• 以前安装失败，是否要先删除？
+  多数情况不必删除，直接再跑一遍 bat 即可。
+  若反复失败且目录混乱，可备份后删除：
+    %USERPROFILE%\.openclaw
+  再重装（会清除本机配置，请先备份）。
+
+• 需要管理员吗？
+  一般不需要。官方脚本在缺少 Node 时可能会请求提升权限安装 Node。
+  按弹出的 UAC 提示操作即可。
+
+• 公司代理 / 网络无法访问 openclaw.ai
+  需能访问 https://openclaw.ai/install.ps1
+  配置好系统代理或 HTTP(S)_PROXY 后再装。
+
+【说明】
+本安装器为非官方封装，会下载并执行 openclaw.ai 官方脚本：
+  https://openclaw.ai/install.ps1
+安装后由本封装尽量执行：openclaw onboard --install-daemon
+文档：https://docs.openclaw.ai/start/getting-started
+日志：%LOCALAPPDATA%\OpenClawInstaller\logs\
+macOS 安装请使用同仓库中的 macOS 安装包 / 使用说明.txt

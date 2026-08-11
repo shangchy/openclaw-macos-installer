@@ -26,6 +26,19 @@ OpenClaw（小龙虾）macOS 一键安装器
   「OpenClaw用户手册.txt」
 （日常命令、改 API Key、启停网关、常见卡点等）
 
+【接入飞书】（macOS / Windows 同一套命令）
+完整步骤见同目录「飞书接入说明.txt」。摘要：
+
+  export PATH="$HOME/.openclaw/bin:$PATH"
+  openclaw gateway status
+  openclaw channels login --channel feishu
+  openclaw gateway restart
+  # 若机器人给了配对码：
+  openclaw pairing list feishu
+  openclaw pairing approve feishu <配对码>
+
+然后在飞书里给机器人发消息即可（Gateway 需保持运行）。
+
 【常见问题】
 • 找不到 openclaw / command not found
   export PATH 只是把目录加入搜索路径。若该目录里根本没有 openclaw，

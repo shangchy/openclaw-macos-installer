@@ -1,44 +1,57 @@
-# OpenClaw（小龙虾）macOS 一键安装包
+# OpenClaw（小龙虾）一键安装包
 
-在 macOS 上双击即可安装 [OpenClaw](https://docs.openclaw.ai/)。
+在 **macOS** / **Windows** 上双击即可安装 [OpenClaw](https://docs.openclaw.ai/)。
 
-默认调用官方**用户目录**安装脚本 [`install-cli.sh`](https://openclaw.ai/install-cli.sh)（安装到 `~/.openclaw`，**不需要** Homebrew / 管理员 sudo）。若需系统级安装，可运行 `./scripts/install-openclaw.sh --system`。
+本仓库为**非官方便利封装**：不重新打包 OpenClaw 二进制，而是下载并执行 openclaw.ai 官方安装脚本。
+
+| 平台 | 官方脚本（默认） | 推荐入口 |
+|------|------------------|----------|
+| macOS | [`install-cli.sh`](https://openclaw.ai/install-cli.sh) → `~/.openclaw`（无需 sudo） | 双击 `OpenClaw Installer.app` |
+| Windows | [`install.ps1`](https://openclaw.ai/install.ps1) | 双击 `一键安装-OpenClaw.bat` |
 
 ## 给最终用户
 
-### 方式 A：双击 App（推荐）
+### macOS · 方式 A：双击 App（推荐）
 
-1. 拿到 `OpenClaw Installer.app`（或 `.dmg` / `.zip`）
+1. 拿到 `OpenClaw Installer.app`（或 macOS 的 `.dmg` / `.zip`）
 2. 双击 **OpenClaw Installer**
 3. 点「开始安装」
 4. 在打开的 Terminal 里按提示完成（准备好模型 API Key）
 
-首次打开若被 Gatekeeper 拦截：
+首次打开若被 Gatekeeper 拦截：右键 App → **打开** → **仍要打开**。
 
-- 右键 App → **打开** → **仍要打开**
+### macOS · 方式 B / C
 
-### 方式 B：双击 `.command`
+- 双击 `一键安装-OpenClaw.command`
+- 或：`./scripts/install-openclaw.sh`（`--skip-onboard` 仅装 CLI）
 
-双击 `一键安装-OpenClaw.command`，在 Terminal 中直接跑安装脚本。
+macOS 系统级安装（可选）：`./scripts/install-openclaw.sh --system`
 
-### 方式 C：命令行
+详见 [使用说明.txt](./使用说明.txt)。
 
-```bash
-chmod +x scripts/install-openclaw.sh
-./scripts/install-openclaw.sh
+### Windows · 双击 bat（推荐）
+
+1. 解压 `OpenClaw-Installer-Windows-*.zip`
+2. 双击 **一键安装-OpenClaw.bat**
+3. 若 SmartScreen 拦截：更多信息 → 仍要运行
+4. 在黑窗里按提示完成（准备好模型 API Key）
+5. **新开** PowerShell 再使用
+
+命令行：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-openclaw.ps1
+# 仅装 CLI：
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-openclaw.ps1 -SkipOnboard
 ```
 
-仅装 CLI、不做引导：
-
-```bash
-./scripts/install-openclaw.sh --skip-onboard
-```
+见 [使用说明-Windows.txt](./使用说明-Windows.txt)。ZIP 内另有英文文件名入口 `Install-OpenClaw.bat`（内容相同）。
 
 ### 安装成功后怎么用？
 
-见同目录扫盲手册：**[OpenClaw用户手册.txt](./OpenClaw用户手册.txt)**（从打开 Dashboard 聊天、常用命令到改 API Key）。
+见扫盲手册：**[OpenClaw用户手册.txt](./OpenClaw用户手册.txt)**。
 
-最短路径：
+**macOS 最短路径：**
 
 ```bash
 export PATH="$HOME/.openclaw/bin:$PATH"
@@ -46,7 +59,38 @@ openclaw gateway status
 openclaw dashboard
 ```
 
+**Windows 最短路径：**
+
+```powershell
+$env:Path = "$env:APPDATA\npm;$env:Path"
+openclaw gateway status
+openclaw dashboard
+```
+
 在浏览器控制面板里发一条消息即可。
+
+### 接入飞书（macOS / Windows 均支持）
+
+OpenClaw 通过官方 Feishu 频道与本机 Gateway 连接（默认 WebSocket，无需公网 IP）。**两端命令相同**，仅 PATH 准备方式不同。
+
+完整扫盲步骤见 **[飞书接入说明.txt](./飞书接入说明.txt)**。摘要：
+
+```bash
+# macOS
+export PATH="$HOME/.openclaw/bin:$PATH"
+
+# Windows PowerShell
+# $env:Path = "$env:APPDATA\npm;$env:Path"
+
+openclaw gateway status
+openclaw channels login --channel feishu   # 扫码或手动填写 App ID/Secret
+openclaw gateway restart
+# 若提示配对：
+openclaw pairing list feishu
+openclaw pairing approve feishu <CODE>
+```
+
+官方文档：[Feishu 频道](https://docs.openclaw.ai/channels/feishu)
 
 ## 推荐：提交到 GitHub 用 Actions 构建
 
@@ -85,9 +129,9 @@ git push -u origin main
 - **Actions**：打开对应 run → Artifacts → `OpenClaw-Installer-macOS-*`
 - **Release**：在 Releases 页面直接下载 `.dmg` / `.zip`
 
-工作流文件：`.github/workflows/build-macos-installer.yml`（`runs-on: macos-14`）。
+工作流文件：`.github/workflows/build-macos-installer.yml`（macOS runner + Windows runner 并行打包）。
 
-> 未做 Apple 代码签名/公证时，用户首次仍可能需「右键 → 打开」。签名需自备 Developer ID 证书并写入 GitHub Secrets（可后续再加）。
+> 未做代码签名时，macOS 首次可能需「右键 → 打开」；Windows 可能需绕过 SmartScreen。
 
 ## 从 Windows 拷到 Mac 后（本地打包，必做一次）
 
@@ -108,28 +152,41 @@ bash prepare-on-mac.sh
 ./build-dmg.sh
 ```
 
+## 在 Windows 上本地打成 ZIP
+
+```powershell
+cd openclaw-macos-installer
+powershell -NoProfile -ExecutionPolicy Bypass -File .\build-windows-zip.ps1
+```
+
 产物在 `dist/`：
 
 | 文件 | 说明 |
 |------|------|
-| `OpenClaw-Installer-macOS-1.0.0.dmg` | 双击挂载后运行 App（一次性安装器） |
-| `OpenClaw-Installer-macOS-1.0.0.zip` | 方便微信 / 网盘传输 |
+| `OpenClaw-Installer-macOS-1.0.0.dmg` | macOS：双击挂载后运行 App |
+| `OpenClaw-Installer-macOS-1.0.0.zip` | macOS：方便网盘传输 |
+| `OpenClaw-Installer-Windows-1.0.0.zip` | Windows：解压后双击 bat |
 
 ## 目录结构
 
 ```
 openclaw-macos-installer/
-├── scripts/install-openclaw.sh # 核心安装逻辑（唯一源码，以这里为准）
-├── OpenClaw Installer.app/     # 双击安装的 App（Resources 内是上式拷贝）
-├── 一键安装-OpenClaw.command   # 备用双击脚本
-├── prepare-on-mac.sh           # 同步脚本 + 修权限 + 清 quarantine
-├── build-dmg.sh                # 同步脚本后打包 DMG/ZIP
-├── 使用说明.txt                # 安装步骤 + 常见问题
-├── OpenClaw用户手册.txt        # 安装后扫盲：如何使用 OpenClaw
+├── scripts/install-openclaw.sh   # macOS 核心安装逻辑
+├── scripts/install-openclaw.ps1  # Windows 核心安装逻辑
+├── OpenClaw Installer.app/       # macOS 双击 App
+├── 一键安装-OpenClaw.command     # macOS 备用双击
+├── 一键安装-OpenClaw.bat         # Windows 双击入口
+├── prepare-on-mac.sh             # macOS：同步脚本 + 权限
+├── build-dmg.sh                  # macOS 打 DMG/ZIP
+├── build-windows-zip.ps1         # Windows 打 ZIP
+├── 使用说明.txt                  # macOS 安装说明
+├── 使用说明-Windows.txt          # Windows 安装说明
+├── OpenClaw用户手册.txt          # 安装后扫盲（双平台）
+├── 飞书接入说明.txt              # 飞书/Lark 接入（双平台）
 └── README.md
 ```
 
-修改 `scripts/install-openclaw.sh` 后，在 Mac 上运行 `bash prepare-on-mac.sh`（或 `./build-dmg.sh`）会自动同步到 App bundle。
+修改 `scripts/install-openclaw.sh` 后，在 Mac 上运行 `bash prepare-on-mac.sh`（或 `./build-dmg.sh`）会同步到 App bundle。
 
 ## 安装后检查
 
@@ -140,7 +197,10 @@ openclaw gateway status
 openclaw dashboard
 ```
 
-日志目录：`~/Library/Logs/OpenClawInstaller/`
+| 平台 | 日志目录 |
+|------|----------|
+| macOS | `~/Library/Logs/OpenClawInstaller/` |
+| Windows | `%LOCALAPPDATA%\OpenClawInstaller\logs\` |
 
 ## 常见问题
 
@@ -241,7 +301,6 @@ codesign --deep --force --options runtime \
 
 ## 说明
 
-- 本仓库为**非官方便利封装**（不重新打包 OpenClaw 二进制），会下载并执行 openclaw.ai 上的官方安装脚本。
-- **默认**使用官方用户目录安装脚本 [`install-cli.sh`](https://openclaw.ai/install-cli.sh)（`~/.openclaw`，无需 Homebrew / sudo）。
-- **可选**系统级安装：`./scripts/install-openclaw.sh --system` → 官方 [`install.sh`](https://openclaw.ai/install.sh)（可能装 Homebrew，需管理员）。
-- 官方脚本以 `--no-onboard` 安装 CLI；本封装随后统一执行 `openclaw onboard --install-daemon`，避免只配好 config 却未装 daemon。
+- 本仓库为**非官方便利封装**，会下载并执行 openclaw.ai 官方安装脚本。
+- **macOS 默认**：[`install-cli.sh`](https://openclaw.ai/install-cli.sh)（`~/.openclaw`）；可选 `--system` → [`install.sh`](https://openclaw.ai/install.sh)。
+- **Windows 默认**：[`install.ps1`](https://openclaw.ai/install.ps1)；封装层对进程使用 `ExecutionPolicy Bypass`，并以 `-NoOnboard` 安装后尽量执行 `openclaw onboard --install-daemon`。
