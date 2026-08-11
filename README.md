@@ -34,6 +34,20 @@ chmod +x scripts/install-openclaw.sh
 ./scripts/install-openclaw.sh --skip-onboard
 ```
 
+### 安装成功后怎么用？
+
+见同目录扫盲手册：**[OpenClaw用户手册.txt](./OpenClaw用户手册.txt)**（从打开 Dashboard 聊天、常用命令到改 API Key）。
+
+最短路径：
+
+```bash
+export PATH="$HOME/.openclaw/bin:$PATH"
+openclaw gateway status
+openclaw dashboard
+```
+
+在浏览器控制面板里发一条消息即可。
+
 ## 推荐：提交到 GitHub 用 Actions 构建
 
 可以。把本目录单独建成一个 GitHub 仓库后，macOS runner 会自动打出 `.dmg` / `.zip`。
@@ -110,7 +124,8 @@ openclaw-macos-installer/
 ├── 一键安装-OpenClaw.command   # 备用双击脚本
 ├── prepare-on-mac.sh           # 同步脚本 + 修权限 + 清 quarantine
 ├── build-dmg.sh                # 同步脚本后打包 DMG/ZIP
-├── 使用说明.txt
+├── 使用说明.txt                # 安装步骤 + 常见问题
+├── OpenClaw用户手册.txt        # 安装后扫盲：如何使用 OpenClaw
 └── README.md
 ```
 
@@ -126,6 +141,85 @@ openclaw dashboard
 ```
 
 日志目录：`~/Library/Logs/OpenClawInstaller/`
+
+## 常见问题
+
+### 找不到 `openclaw` / `command not found`
+
+`export PATH=...` 只是把目录加入搜索路径。若该目录里没有 `openclaw` 可执行文件，仍会报找不到。多数情况不是 PATH 没生效，而是**没装上或装到了别处**。
+
+**1. 先确认文件是否存在（macOS Terminal）：**
+
+```bash
+echo "$HOME"
+ls -la "$HOME/.openclaw/bin"
+ls -la "$HOME/.openclaw/bin/openclaw"
+type -a openclaw 2>/dev/null
+```
+
+| 现象 | 含义 |
+|------|------|
+| `~/.openclaw` 都没有 | 安装没成功，或没跑完 |
+| 有目录但没有 `bin/openclaw` | 安装半截/失败，PATH 再对也没用 |
+| 文件存在但 permission denied | 无执行权限（少见） |
+| 文件存在、`type` 仍没有 | PATH 或当前 shell 环境有问题 |
+
+**2. 临时 PATH 后重试：**
+
+```bash
+export PATH="$HOME/.openclaw/bin:$PATH"
+openclaw --version
+# 然后新开一个 Terminal 窗口再试
+```
+
+**3. 用绝对路径区分问题：**
+
+```bash
+"$HOME/.openclaw/bin/openclaw" --version
+```
+
+- 绝对路径能跑、`openclaw` 不能 → PATH 未生效  
+- 绝对路径也不行 → 安装不完整或包装脚本损坏  
+
+**4. 根本没装成功（最常见）：**
+
+查日志：
+
+```bash
+ls -lt ~/Library/Logs/OpenClawInstaller/
+# 打开最新 install-*.log 看末尾 ERROR
+```
+
+或重装：
+
+```bash
+curl -fsSL https://openclaw.ai/install-cli.sh | bash -s -- --no-onboard
+ls "$HOME/.openclaw/bin/openclaw"
+```
+
+**5. 装到了别的目录：**
+
+系统安装 / Homebrew / 全局 npm 时，可能不在 `~/.openclaw/bin`：
+
+```bash
+find "$HOME" /opt/homebrew /usr/local -name openclaw 2>/dev/null | head
+ls "$(npm prefix -g 2>/dev/null)/bin/openclaw" 2>/dev/null
+export PATH="$(npm prefix -g)/bin:$PATH"   # 若在 npm 全局
+```
+
+**6. 环境不对：**
+
+- 必须在 **macOS** Terminal（`uname -s` 应为 `Darwin`），不是 Windows  
+- 确认 `whoami` / `$HOME` 与安装时为同一用户  
+- 使用英文半角引号，勿用全角字符  
+
+### Installing Homebrew failed / Need sudo
+
+旧版一键包可能走系统安装并装 Homebrew。请用**新版**（默认 `~/.openclaw`，无需 sudo），或先用管理员装好 Homebrew 后再装。
+
+### 当前用户不是 Administrator
+
+默认用户目录安装即可，不必管理员。系统级安装请用 `./scripts/install-openclaw.sh --system`。
 
 ## 系统要求
 

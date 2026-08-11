@@ -1,0 +1,272 @@
+OpenClaw（小龙虾）用户手册 · 扫盲版
+====================================
+适用：已经用本安装器在 macOS 上装好 OpenClaw 的新手
+官方完整文档：https://docs.openclaw.ai/start/getting-started
+
+------------------------------------------------------------
+一、OpenClaw 是什么？（1 分钟理解）
+------------------------------------------------------------
+
+OpenClaw（也叫「小龙虾」）是一个跑在你电脑上的 AI 助手平台。
+
+可以把它想成三块：
+
+  1. openclaw 命令
+     终端里用的「遥控器」，查状态、改设置、打开网页面板。
+
+  2. Gateway（网关）
+     后台常驻的小服务（默认端口 18789）。
+     没启动就聊不了天、网页面板也打不开。
+
+  3. Control UI（控制面板 / Dashboard）
+     浏览器里的聊天和管理界面。日常聊天优先用它。
+
+默认安装位置（本安装器用户目录模式）：
+  程序与命令 ≈ ~/.openclaw/bin/openclaw
+  配置文件   ≈ ~/.openclaw/openclaw.json
+  安装日志   ≈ ~/Library/Logs/OpenClawInstaller/
+
+------------------------------------------------------------
+二、开始前检查（30 秒）
+------------------------------------------------------------
+
+1. 打开 macOS 的「终端」(Terminal)
+
+2. 确认命令能用：
+
+     export PATH="$HOME/.openclaw/bin:$PATH"
+     openclaw --version
+
+   若提示找不到命令：请打开同目录下的「使用说明.txt」
+   里【常见问题】→「找不到 openclaw」。
+
+3. 确认网关在跑：
+
+     openclaw gateway status
+
+   正常时会看到 Gateway 在监听（常见端口 18789）。
+   若显示没在运行，尝试：
+
+     openclaw gateway start
+     # 或重新做一次引导（会装后台服务）：
+     openclaw onboard --install-daemon
+
+------------------------------------------------------------
+三、第一次使用：浏览器里聊起来（推荐）
+------------------------------------------------------------
+
+第 1 步：打开控制面板
+
+     openclaw dashboard
+
+  一般会自动打开浏览器。
+  本机也可访问：http://127.0.0.1:18789/
+
+第 2 步：在网页的聊天框里输入一句话
+
+  例如：「你好，请用一句话介绍你自己」
+
+  能收到 AI 回复 → 安装和使用链路都正常。
+
+第 3 步：（可选）去网页里看看
+
+  - 聊天：主界面
+  - 设置 / 配置：模型、通道、权限等（名称因版本略有差异）
+
+注意：
+  • 控制面板默认给本机使用。不要把端口随意暴露到公网。
+  • 需要模型厂商的 API Key（Anthropic / OpenAI / Google 等）。
+    安装时的引导一般已让你配置过；没配成功见下文「重新配置」。
+
+------------------------------------------------------------
+四、你最常会用到的命令
+------------------------------------------------------------
+
+先保证 PATH（新开终端若找不到命令就先执行）：
+
+  export PATH="$HOME/.openclaw/bin:$PATH"
+
+命令一览（从常用到偶尔用）：
+
+  openclaw --version
+      查看是否安装成功、版本号
+
+  openclaw doctor
+      体检：配置、环境是否有问题
+
+  openclaw gateway status
+      看后台网关是否在运行
+
+  openclaw gateway start
+      启动网关
+
+  openclaw gateway stop
+      停止网关
+
+  openclaw gateway restart
+      重启网关（改完配置后常用）
+
+  openclaw dashboard
+      打开浏览器控制面板（最常用）
+
+  openclaw dashboard --no-open
+      只打印地址，不自动开浏览器
+
+  openclaw configure
+      交互式改模型、通道等设置
+
+  openclaw onboard --install-daemon
+      重新走安装引导，并安装/修复后台服务
+      （API Key 没配对、网关没装上当服务时用）
+
+  openclaw channels login
+      登录/绑定消息渠道（如后续接 WhatsApp 等）
+
+------------------------------------------------------------
+五、日常使用节奏（记这 3 句就够）
+------------------------------------------------------------
+
+  早上打开电脑后（若后台服务已装，通常自动在跑）：
+
+    ① openclaw gateway status     # 确认还活着
+    ② openclaw dashboard          # 打开网页
+    ③ 在浏览器里聊天
+
+  改完重要配置后：
+
+    openclaw gateway restart
+    openclaw dashboard
+
+  感觉不对劲时：
+
+    openclaw doctor
+    openclaw gateway status
+
+------------------------------------------------------------
+六、改模型 / API Key / 重新配置
+------------------------------------------------------------
+
+安装引导没走完，或要换 key、换模型：
+
+  方式 A（推荐新手）：
+
+    openclaw configure
+
+  方式 B（完整重装引导，可重装后台服务）：
+
+    openclaw onboard --install-daemon
+
+按屏幕提示：
+
+  • 选择模型提供商（如 Anthropic、OpenAI、Google）
+  • 粘贴 API Key（注意不要发给别人、不要截图发群）
+  • 本地 Gateway 一般默认即可
+
+配置成功后再：
+
+  openclaw gateway restart
+  openclaw dashboard
+
+------------------------------------------------------------
+七、进阶一点：接到手机里聊（可选）
+------------------------------------------------------------
+
+浏览器只是最快的用法。还可通过「频道」接到：
+
+  Telegram、Discord、Slack、WhatsApp、飞书 等
+
+新手建议：
+
+  1. 先保证电脑上 dashboard 聊天正常
+  2. 再看官方「频道」文档，按一种渠道接：
+     https://docs.openclaw.ai/channels
+  3. Telegram 通常相对好上手（需要 Bot Token）
+
+  渠道相关命令示例：
+
+    openclaw channels login
+    openclaw configure
+
+细节因渠道不同，以官方文档为准。
+
+------------------------------------------------------------
+八、网关启停与后台服务
+------------------------------------------------------------
+
+安装时若选了安装 daemon / install-daemon：
+
+  • 开机后 Gateway 多半已在后台运行
+  • 不必每次手动 openclaw gateway start
+
+查看状态：
+
+  openclaw gateway status
+
+手动启停：
+
+  openclaw gateway start
+  openclaw gateway stop
+  openclaw gateway restart
+
+前台调试用（一般新手不需要）：
+
+  openclaw gateway --port 18789 --verbose
+  # 关掉终端窗口会停掉这次前台进程
+
+------------------------------------------------------------
+九、常见卡点（扫盲速查）
+------------------------------------------------------------
+
+• 浏览器打不开 / 空白
+  → openclaw gateway status 看是否在跑
+  → openclaw gateway start 或 restart
+  → 再执行 openclaw dashboard
+
+• 能打开页面，聊天没回复
+  → 多半是模型 API Key 无效、欠费或未配置
+  → openclaw configure 或 openclaw onboard
+  → openclaw doctor
+
+• 提示 command not found: openclaw
+  → export PATH="$HOME/.openclaw/bin:$PATH"
+  → 详见「使用说明.txt」常见问题
+
+• 换了电脑 / 换了用户
+  → 配置在各自用户目录 ~/.openclaw，不会自动带过去
+  → 需要重新安装并配置 API Key
+
+• 想卸载（简述）
+  → 先停服务：openclaw gateway stop
+  → 删除用户数据目录（谨慎，会清配置）：
+      默认相关路径在 ~/.openclaw
+  → 完整卸载步骤以官方文档为准：
+      https://docs.openclaw.ai/
+
+------------------------------------------------------------
+十、建议你记住的最小命令集
+------------------------------------------------------------
+
+  export PATH="$HOME/.openclaw/bin:$PATH"
+  openclaw gateway status
+  openclaw dashboard
+  openclaw doctor
+  openclaw configure
+
+每天只会用两个的话，就只记：
+
+  openclaw gateway status
+  openclaw dashboard
+
+------------------------------------------------------------
+十一、更多学习
+------------------------------------------------------------
+
+  快速上手：  https://docs.openclaw.ai/start/getting-started
+  引导向导：  https://docs.openclaw.ai/start/wizard
+  控制面板：  https://docs.openclaw.ai/web/dashboard
+  网关命令：  https://docs.openclaw.ai/cli/gateway
+  消息频道：  https://docs.openclaw.ai/channels
+  本安装器：  见 使用说明.txt / README.md
+
+本手册为非官方扫盲说明，随本 macOS 一键安装包附带；
+命令与界面若随 OpenClaw 版本更新略有差异，以官方文档为准。

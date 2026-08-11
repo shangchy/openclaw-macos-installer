@@ -13,16 +13,72 @@ OpenClaw（小龙虾）macOS 一键安装器
 【备用方式】
 双击「一键安装-OpenClaw.command」同样可安装。
 
-【安装后】
-  openclaw --version
+【安装后 · 如何使用】
+最短路径（终端里）：
+
+  export PATH="$HOME/.openclaw/bin:$PATH"
   openclaw gateway status
   openclaw dashboard
 
-若提示找不到 openclaw：
-  export PATH="$HOME/.openclaw/bin:$PATH"
-  然后新开一个 Terminal 窗口再试。
+然后在浏览器控制面板里输入一句话聊天。
+
+更完整的扫盲说明见同目录：
+  「OpenClaw用户手册.txt」
+（日常命令、改 API Key、启停网关、常见卡点等）
 
 【常见问题】
+• 找不到 openclaw / command not found
+  export PATH 只是把目录加入搜索路径。若该目录里根本没有 openclaw，
+  仍然会报找不到。多数情况不是 PATH 没生效，而是没装上或装到了别处。
+
+  1) 先在 Mac 的 Terminal 确认文件是否存在：
+       echo "$HOME"
+       ls -la "$HOME/.openclaw/bin"
+       ls -la "$HOME/.openclaw/bin/openclaw"
+       type -a openclaw 2>/dev/null
+
+     对照：
+       • ~/.openclaw 都没有 → 安装没成功或没跑完
+       • 有目录但没有 bin/openclaw → 安装半截/失败，PATH 再对也没用
+       • 文件存在但 permission denied → 无执行权限（少见）
+       • 文件存在、type 仍没有 → 看下方 PATH/环境
+
+  2) 临时加入 PATH 后重试（需在 macOS Terminal，不是 Windows）：
+       export PATH="$HOME/.openclaw/bin:$PATH"
+       openclaw --version
+       # 然后新开一个 Terminal 窗口再试
+
+  3) 用绝对路径区分「没装上」还是「PATH 问题」：
+       "$HOME/.openclaw/bin/openclaw" --version
+       绝对路径能跑、openclaw 不能 → PATH 未生效
+       绝对路径也不行 → 安装不完整或包装脚本损坏
+
+  4) 根本没装成功（最常见）：
+       网络中断、官方脚本失败、中途取消等，都会导致无二进制。
+       查日志：
+         ls -lt ~/Library/Logs/OpenClawInstaller/
+         # 打开最新的 install-*.log 看末尾 ERROR
+       或重装（官方用户目录脚本）：
+         curl -fsSL https://openclaw.ai/install-cli.sh | bash -s -- --no-onboard
+         ls "$HOME/.openclaw/bin/openclaw"
+
+  5) 装到了别的目录（非 ~/.openclaw/bin）：
+       若走了系统安装 / Homebrew / 全局 npm，可能在：
+         /opt/homebrew/bin/openclaw
+         /usr/local/bin/openclaw
+         $(npm prefix -g)/bin/openclaw
+       可查：
+         find "$HOME" /opt/homebrew /usr/local -name openclaw 2>/dev/null | head
+         ls "$(npm prefix -g 2>/dev/null)/bin/openclaw" 2>/dev/null
+       若 npm 全局有，可：
+         export PATH="$(npm prefix -g)/bin:$PATH"
+
+  6) 环境不对：
+       • 必须在 macOS Terminal 执行（uname -s 应为 Darwin）
+       • 不要在 Windows CMD/PowerShell 里找这个命令
+       • 确认 whoami / $HOME 与安装时是同一用户
+       • export 时注意使用英文半角引号，勿用全角字符
+
 • Installing Homebrew failed / Need sudo access
   旧版一键包会走系统安装并装 Homebrew，需要管理员密码。
   请改用新版安装包（默认装到 ~/.openclaw，不需要 sudo）。
